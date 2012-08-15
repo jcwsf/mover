@@ -15,8 +15,8 @@ describe Mover do
         [ 1, 0, 1 ].each { |v| $db.migrate(v) }
         @articles = create_records(Article)
         @comments = create_records(Comment)
-        @articles[0].move_to(ArticleArchive, @options)
-        Article.move_to(
+        @articles[0].move_to_table(ArticleArchive, @options)
+        Article.move_to_table(
           ArticleArchive,
           @options.merge(:conditions => [ 'articles.id = ?', 2 ])
         )
@@ -49,8 +49,8 @@ describe Mover do
       describe 'move records back' do
 
         before(:each) do
-          ArticleArchive.find(1).move_to(Article, @options)
-          ArticleArchive.move_to(
+          ArticleArchive.find(1).move_to_table(Article, @options)
+          ArticleArchive.move_to_table(
             Article,
             @options.merge(:conditions => [ 'article_archives.id = ?', 2 ])
           )
@@ -79,8 +79,8 @@ describe Mover do
             article_1.update_attributes(:title => 'edited')
             article_2 = Article.find(2)
             article_2.update_attributes(:title => 'edited')
-            article_1.move_to(ArticleArchive, @options.merge(:copy => true))
-            Article.move_to(
+            article_1.move_to_table(ArticleArchive, @options.merge(:copy => true))
+            Article.move_to_table(
               ArticleArchive,
               @options.merge(
                 :conditions => [ 'articles.id = ?', 2 ],
@@ -106,8 +106,8 @@ describe Mover do
       @moved_at = Time.now.utc - 60
       @articles = create_records(Article, :moved_at => @moved_at)
       @comments = create_records(Comment)
-      @articles[0].move_to(ArticleArchive, :migrate => true)
-      Article.move_to(
+      @articles[0].move_to_table(ArticleArchive, :migrate => true)
+      Article.move_to_table(
         ArticleArchive,
         :conditions => [ 'articles.id = ?', 2 ],
         :migrate => true

@@ -14,17 +14,17 @@ module Mover
   
   module ClassMethods
     
-    def after_move(*to_class, &block)
-      @after_move ||= []
-      @after_move << [ to_class, block ]
+    def after_move_to_table(*to_class, &block)
+      @after_move_to_table ||= []
+      @after_move_to_table << [ to_class, block ]
     end
     
-    def before_move(*to_class, &block)
-      @before_move ||= []
-      @before_move << [ to_class, block ]
+    def before_move_to_table(*to_class, &block)
+      @before_move_to_table ||= []
+      @before_move_to_table << [ to_class, block ]
     end
 
-    def move_to(to_class, options={})
+    def move_to_table(to_class, options={})
       from_class = self
       
       # Conditions
@@ -74,8 +74,8 @@ module Mover
         classes.collect! { |c| eval(c.to_s) }
         block if classes.include?(to_class) || classes.empty?
       end
-      before = (@before_move || []).collect(&collector).compact
-      after = (@after_move || []).collect(&collector).compact
+      before = (@before_move_to_table || []).collect(&collector).compact
+      after = (@after_move_to_table || []).collect(&collector).compact
       
       # Instances
       instances =
@@ -183,10 +183,10 @@ module Mover
   
   module InstanceMethods
     
-    def move_to(to_class, options={})
+    def move_to_table(to_class, options={})
       options[:conditions] = "#{self.class.table_name}.#{self.class.primary_key} = #{id}"
       options[:instance] = self
-      self.class.move_to(to_class, options)
+      self.class.move_to_table(to_class, options)
     end
   end
 end
