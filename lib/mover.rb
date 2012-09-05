@@ -1,7 +1,5 @@
 require File.dirname(__FILE__) + '/mover/gems'
 
-$:.unshift File.dirname(__FILE__)
-
 module Mover
   
   def self.included(base)
@@ -35,6 +33,7 @@ module Mover
       # Columns
       magic = options[:magic] || 'moved_at'
       from = {
+        :database => from_class.connection.current_database,
         :columns => from_class.column_names,
         :table => from_class.table_name
       }
@@ -43,6 +42,12 @@ module Mover
         :columns => to_class.column_names,
         :table => to_class.table_name
       }
+      
+      if (options[:copy_slave_to_master] && defined?(ActiveRecord::Base.connection_proxy))
+        options[:copy] = true
+        from[:database] = ActiveRecord::Base.configurations[Rails.env + '_slave_database']['database']
+        to[:database] = ActiveRecord::Base.configurations[Rails.env]['database']
+      end
       
       # insert[column] = value
       insert = (from[:columns] & to[:columns]).inject({}) do |hash, column|
@@ -98,7 +103,7 @@ module Mover
           end
         end
       end
-      
+   
       # Execute
       transaction do
         exec_callbacks.call before
@@ -107,7 +112,7 @@ module Mover
           connection.execute(<<-SQL)
             INSERT INTO #{to[:database]}.#{to[:table]} (#{insert.keys.join(', ')})
             SELECT #{insert.values.join(', ')}
-            FROM #{from[:table]}
+            FROM #{from[:database]}.#{from[:table]}
             #{where}
           SQL
         elsif !options[:generic] && connection.class.to_s.include?('Mysql')
@@ -121,12 +126,12 @@ module Mover
           connection.execute(<<-SQL)
             INSERT INTO #{ to[:database]}.#{to[:table]} (#{insert.keys.join(', ')})
             SELECT #{insert.values.join(', ')}
-            FROM #{from[:table]}
+            FROM #{from[:database]}.#{from[:table]}
             #{where}
             ON DUPLICATE KEY
             UPDATE #{update.join(', ')};
           SQL
-        else
+        else    
           conditions.gsub!(to[:table], 't')
           conditions.gsub!(from[:table], 'f')
           select = insert.values.collect { |i| i.include?("'") ? i : "f.#{i}" }
@@ -139,9 +144,9 @@ module Mover
           end
           
           connection.execute(<<-SQL)
-            UPDATE #{to[:table]}
+            UPDATE #{to[:database]}.#{to[:table]}
               AS t
-            INNER JOIN #{from[:table]}
+            INNER JOIN #{from[:database]}.#{from[:table]}
               AS f
             ON f.id = t.id
               AND #{conditions}
@@ -149,11 +154,11 @@ module Mover
           SQL
       
           connection.execute(<<-SQL)
-            INSERT INTO #{to[:table]} (#{insert.keys.join(', ')})
+            INSERT INTO #{to[:database]}.#{to[:table]} (#{insert.keys.join(', ')})
             SELECT #{select.join(', ')}
-            FROM #{from[:table]}
+            FROM #{from[:database]}.#{from[:table]}
               AS f
-            LEFT OUTER JOIN #{to[:table]}
+            LEFT OUTER JOIN #{to[:database]}.#{to[:table]}
               AS t
             ON f.id = t.id
             WHERE (
@@ -164,7 +169,7 @@ module Mover
         end
         
         unless options[:copy]
-          connection.execute("DELETE FROM #{from[:table]} #{where}")
+          connection.execute("DELETE FROM #{from[:database]}.#{from[:table]} #{where}")
         end
         
         exec_callbacks.call after
