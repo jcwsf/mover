@@ -33,21 +33,18 @@ module Mover
       # Columns
       magic = options[:magic] || 'moved_at'
       from = {
-        :database => from_class.connection.current_database,
+        :database => options[:from_database],
         :columns => from_class.column_names,
         :table => from_class.table_name
       }
       to = {
-        :database => to_class.connection.current_database,
-        :columns => to_class.column_names,
+        :database => options[:to_database],
+        :columns => options[:use_from_columns] ? from_class.column_names : to_class.column_names,
         :table => to_class.table_name
       }
-      
-      if (options[:copy_slave_to_master] && defined?(ActiveRecord::Base.connection_proxy))
-        options[:copy] = true
-        from[:database] = ActiveRecord::Base.configurations[Rails.env + '_slave_database']['database']
-        to[:database] = ActiveRecord::Base.configurations[Rails.env]['database']
-      end
+  
+      from[:database] ||= from_class.connection.current_database
+      to[:database] ||= to_class.connection.current_database
       
       # insert[column] = value
       insert = (from[:columns] & to[:columns]).inject({}) do |hash, column|
