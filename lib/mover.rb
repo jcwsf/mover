@@ -27,7 +27,10 @@ module Mover
       
       # Conditions
       conditions = options[:conditions] || '1'
-      conditions = self.sanitize_sql(conditions)
+      # Note - using send() here because sanitize_sql
+      # becomes private when ar-extensions gem is installed.
+      # Using send() works in either case.
+      conditions = self.send(:sanitize_sql, conditions)
       where = "WHERE #{conditions}"
       
       # Columns
@@ -128,9 +131,14 @@ module Mover
             ON DUPLICATE KEY
             UPDATE #{update.join(', ')};
           SQL
-        else    
-          conditions.gsub!(to[:table], 't')
-          conditions.gsub!(from[:table], 'f')
+        else
+          if (to[:table].length >= from[:table].length)
+            conditions.gsub!(to[:table], 't')
+            conditions.gsub!(from[:table], 'f')
+          else
+            conditions.gsub!(from[:table], 'f')
+            conditions.gsub!(to[:table], 't')
+          end
           select = insert.values.collect { |i| i.include?("'") ? i : "f.#{i}" }
           set = insert.collect do |column, value|
             if value.include?("'")
