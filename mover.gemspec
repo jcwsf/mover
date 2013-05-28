@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
+
 root = File.expand_path('../', __FILE__)
-lib = "#{root}/lib"
+lib = File.expand_path('../lib/', __FILE__)
 $:.unshift lib unless $:.include?(lib)
  
 require 'mover/gems'

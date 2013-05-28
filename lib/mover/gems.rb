@@ -1,7 +1,7 @@
 unless defined?(Mover::Gems)
-  
+
   require 'yaml'
-  
+
   module Mover
     module Gems
       class <<self
